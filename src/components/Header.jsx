@@ -2,13 +2,16 @@
 
 import React from "react";
 import Image from "next/image";
-import { Database, CheckCircle, PlusCircle } from "lucide-react";
+import Link from "next/link";
+import { Database, CheckCircle, PlusCircle, LogIn, LogOut } from "lucide-react";
 
 export default function Header({
   ownedCount = 0,
   displayCount = 0,
   totalCoins = 264962,
-  onAddCoin, // NEW PROP
+  onAddCoin,
+  session,
+  onLogout,
 }) {
   return (
     <header className="app-header">
@@ -44,28 +47,47 @@ export default function Header({
         </div>
 
         <div className="header-stats">
-          {/* NEW: Add Coin Button (Only shows if onAddCoin is provided) */}
-          {onAddCoin && (
-            <button 
-              onClick={onAddCoin}
-              className="stat-badge"
-              style={{ 
-                cursor: "pointer", 
-                borderColor: "var(--brand-gold)", 
-                background: "#fffbeb",
-                flexDirection: "row",
-                gap: "0.5rem"
-              }}
+          {session ? (
+            <>
+              {/* Add Coin Button */}
+              {onAddCoin && (
+                <button
+                  onClick={onAddCoin}
+                  className="header-action-btn"
+                  title="Add a new coin"
+                >
+                  <PlusCircle size={20} className="text-gold" />
+                  <span className="stat-value">Add Coin</span>
+                </button>
+              )}
+
+              {/* Sign Out Button */}
+              <button
+                onClick={onLogout}
+                className="header-action-btn"
+                title="Sign Out"
+              >
+                <LogOut size={20} className="text-gold" />
+                <span className="stat-value">Sign Out</span>
+              </button>
+            </>
+          ) : (
+            /* Sign In Button - Applied class directly to Link to fix container structure */
+            <Link 
+              href="/login" 
+              className="header-action-btn" 
+              title="Sign In"
             >
-              <PlusCircle size={20} className="text-gold" />
-              <span className="stat-value" style={{ fontSize: "0.9rem" }}>Add Coin</span>
-            </button>
+              <LogIn size={20} className="text-gold" />
+              <span className="stat-value">Sign In</span>
+            </Link>
           )}
 
           <div className="stat-badge">
             <span className="stat-label">Showing</span>
-            {/* Defensive check for displayCount */}
-            <span className="stat-value">{(displayCount || 0).toLocaleString()}</span>
+            <span className="stat-value">
+              {(displayCount || 0).toLocaleString()}
+            </span>
           </div>
         </div>
       </div>

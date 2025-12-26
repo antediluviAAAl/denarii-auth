@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from "react";
 import Image from "next/image";
-import { X, CheckCircle, ExternalLink, AlertTriangle } from "lucide-react";
+import { X, CheckCircle, ExternalLink, AlertTriangle, PlusCircle } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import { useQuery } from "@tanstack/react-query";
 
@@ -65,7 +65,7 @@ async function fetchCoinDetails(coinId) {
   return { ...data, countryName };
 }
 
-export default function CoinModal({ coin, onClose }) {
+export default function CoinModal({ coin, onClose, session, onAddCoin }) {
   const modalRef = useRef(null);
 
   // Close on Escape
@@ -84,7 +84,6 @@ export default function CoinModal({ coin, onClose }) {
     isError,
     error,
   } = useQuery({
-    // UPDATE: Changed key to '_v2' to bust any stale cache from previous errors
     queryKey: ["coin_detail_v2", coin.coin_id],
     queryFn: () => fetchCoinDetails(coin.coin_id),
     staleTime: 1000 * 60 * 30, // 30 mins
@@ -133,12 +132,40 @@ export default function CoinModal({ coin, onClose }) {
       >
         {/* Header */}
         <div className="modal-header">
-          <div className="modal-title-wrapper">
+          <div className="modal-title-wrapper" style={{ flex: 1 }}>
             <h2>{displayData.name}</h2>
             {displayData.is_owned && (
               <div className="modal-owned-badge">
                 <CheckCircle size={18} /> <span>Owned</span>
               </div>
+            )}
+            
+            {/* Add Coin Button (Only visible if Logged in AND Not Owned) */}
+            {session && !displayData.is_owned && onAddCoin && (
+               <button
+               onClick={(e) => {
+                 e.stopPropagation();
+                 onAddCoin(displayData);
+               }}
+               style={{
+                 display: "flex",
+                 alignItems: "center",
+                 gap: "0.5rem",
+                 padding: "0.25rem 0.75rem",
+                 background: "#fffbeb",
+                 border: "1px solid var(--brand-gold)",
+                 borderRadius: "20px",
+                 color: "#d97706",
+                 fontSize: "0.875rem",
+                 fontWeight: 600,
+                 cursor: "pointer",
+                 marginLeft: "0.5rem"
+               }}
+               title="Add this coin to your collection"
+             >
+               <PlusCircle size={16} />
+               <span>Add to Collection</span>
+             </button>
             )}
           </div>
           <button className="modal-close" onClick={onClose}>
@@ -174,7 +201,7 @@ export default function CoinModal({ coin, onClose }) {
                     style={{
                       position: "relative",
                       width: "100%",
-                      height: "400px", // React Parity: 400px
+                      height: "400px",
                       background: "var(--border-light)",
                       borderRadius: "var(--radius)",
                       boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
@@ -187,7 +214,7 @@ export default function CoinModal({ coin, onClose }) {
                         alt="Obverse"
                         fill
                         sizes="(max-width: 768px) 100vw, 500px"
-                        style={{ objectFit: "cover" }} // React Parity: Cover
+                        style={{ objectFit: "cover" }}
                         priority
                       />
                     ) : (
@@ -281,7 +308,6 @@ export default function CoinModal({ coin, onClose }) {
                   <div className="detail-item">
                     <strong>Country:</strong>{" "}
                     <span className="detail-value">
-                      {/* This will now show "Unknown" instead of Loading if fetch succeeded but found nothing */}
                       {displayData.countryName ||
                         (isError ? "Error" : "Unknown")}
                     </span>

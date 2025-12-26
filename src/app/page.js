@@ -9,13 +9,21 @@ import { useCoins } from "../hooks/useCoins";
 import { supabase } from "../lib/supabaseClient";
 
 // Lazy Load Modals
-const CoinModal = dynamic(() => import("../components/CoinModal"), { ssr: false });
-const AddCoinModal = dynamic(() => import("../components/AddCoinModal"), { ssr: false });
+const CoinModal = dynamic(() => import("../components/CoinModal"), {
+  ssr: false,
+});
+const AddCoinModal = dynamic(() => import("../components/AddCoinModal"), {
+  ssr: false,
+});
 
 export default function Home() {
   const [selectedCoin, setSelectedCoin] = useState(null);
   const [viewMode, setViewMode] = useState("grid");
+  
+  // State for Add Modal
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [preSelectedCoinForAdd, setPreSelectedCoinForAdd] = useState(null);
+
   const [session, setSession] = useState(null);
 
   // AUTH CHECK ON MOUNT
@@ -24,7 +32,9 @@ export default function Home() {
       setSession(session);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
 
@@ -41,13 +51,34 @@ export default function Home() {
     isExploreMode,
   } = useCoins();
 
+  // HANDLERS
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.reload();
+  };
+
+  const handleOpenAddModal = () => {
+    setPreSelectedCoinForAdd(null); // Ensure clean state
+    setIsAddModalOpen(true);
+  };
+
+  const handleAddSpecificCoin = (coin) => {
+    // 1. Close the detail modal
+    setSelectedCoin(null);
+    // 2. Set the coin to be added
+    setPreSelectedCoinForAdd(coin);
+    // 3. Open the add modal
+    setIsAddModalOpen(true);
+  };
+
   return (
     <div className="app-container">
-      <Header 
-        ownedCount={ownedCount} 
+      <Header
+        ownedCount={ownedCount}
         displayCount={coins?.length || 0}
-        // Only pass the handler if the user is logged in
-        onAddCoin={session ? () => setIsAddModalOpen(true) : null}
+        session={session}
+        onLogout={handleLogout}
+        onAddCoin={session ? handleOpenAddModal : null}
       />
 
       <main className="main-content">
@@ -73,16 +104,24 @@ export default function Home() {
 
       {/* View Coin Modal */}
       {selectedCoin && (
-        <CoinModal coin={selectedCoin} onClose={() => setSelectedCoin(null)} />
+        <CoinModal 
+          coin={selectedCoin} 
+          onClose={() => setSelectedCoin(null)} 
+          session={session}
+          onAddCoin={handleAddSpecificCoin}
+        />
       )}
-      
+
       {/* Add Coin Modal */}
       {isAddModalOpen && (
-        <AddCoinModal onClose={() => setIsAddModalOpen(false)} />
+        <AddCoinModal
+          onClose={() => setIsAddModalOpen(false)}
+          initialCoin={preSelectedCoinForAdd}
+        />
       )}
 
       <footer className="app-footer">
-        <p>Numismatic Gallery v2 • {(coins?.length || 0)} coins loaded</p>
+        <p>Numismatic Gallery v2 • {coins?.length || 0} coins loaded</p>
       </footer>
     </div>
   );
