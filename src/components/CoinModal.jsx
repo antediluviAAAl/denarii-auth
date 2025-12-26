@@ -2,7 +2,14 @@
 
 import React, { useEffect, useRef } from "react";
 import Image from "next/image";
-import { X, CheckCircle, ExternalLink, AlertTriangle, PlusCircle } from "lucide-react";
+import {
+  X,
+  CheckCircle,
+  ExternalLink,
+  AlertTriangle,
+  PlusCircle,
+  Search,
+} from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import { useQuery } from "@tanstack/react-query";
 
@@ -123,6 +130,33 @@ export default function CoinModal({ coin, onClose, session, onAddCoin }) {
     displayData.images?.reverse?.original ||
     displayData.images?.reverse?.medium;
 
+  // --- SMART SEARCH LOGIC START ---
+  const coinName = displayData.name || "";
+  const coinYear = displayData.year ? String(displayData.year) : "";
+
+  const query = coinName.includes(coinYear)
+    ? coinName
+    : `${coinName} ${coinYear}`;
+
+  const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(
+    query
+  )}`;
+  // --- SMART SEARCH LOGIC END ---
+
+  // SHARED STYLES for all header buttons (Owned, Search, Add)
+  const actionBtnStyle = {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "36px", // Fixed Width
+    height: "36px", // Fixed Height
+    borderRadius: "8px", // CHANGED: Rounded Square (was 50%)
+    cursor: "pointer",
+    textDecoration: "none",
+    flexShrink: 0,
+    transition: "transform 0.2s, background 0.2s, box-shadow 0.2s",
+  };
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
@@ -132,42 +166,82 @@ export default function CoinModal({ coin, onClose, session, onAddCoin }) {
       >
         {/* Header */}
         <div className="modal-header">
-          <div className="modal-title-wrapper" style={{ flex: 1 }}>
-            <h2>{displayData.name}</h2>
-            {displayData.is_owned && (
-              <div className="modal-owned-badge">
-                <CheckCircle size={18} /> <span>Owned</span>
-              </div>
-            )}
-            
-            {/* Add Coin Button (Only visible if Logged in AND Not Owned) */}
-            {session && !displayData.is_owned && onAddCoin && (
-               <button
-               onClick={(e) => {
-                 e.stopPropagation();
-                 onAddCoin(displayData);
-               }}
-               style={{
-                 display: "flex",
-                 alignItems: "center",
-                 gap: "0.5rem",
-                 padding: "0.25rem 0.75rem",
-                 background: "#fffbeb",
-                 border: "1px solid var(--brand-gold)",
-                 borderRadius: "20px",
-                 color: "#d97706",
-                 fontSize: "0.875rem",
-                 fontWeight: 600,
-                 cursor: "pointer",
-                 marginLeft: "0.5rem"
-               }}
-               title="Add this coin to your collection"
-             >
-               <PlusCircle size={16} />
-               <span>Add to Collection</span>
-             </button>
-            )}
+          <div
+            className="modal-title-wrapper"
+            style={{
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              paddingRight: "1rem",
+            }}
+          >
+            {/* 1. Title (Left) */}
+            <h2 style={{ margin: 0, lineHeight: 1.2 }}>{displayData.name}</h2>
+
+            {/* 2. Actions Group (Pushed to Far Right via marginLeft: auto) */}
+            <div
+              style={{
+                marginLeft: "auto",
+                display: "flex",
+                gap: "0.5rem",
+                alignItems: "center",
+              }}
+            >
+              {/* Owned Badge (Icon Only) */}
+              {displayData.is_owned && (
+                <div
+                  style={{
+                    ...actionBtnStyle,
+                    background: "#d1fae5", // --owned-green-light
+                    border: "1px solid #10b981", // --owned-green
+                    color: "#065f46", // --owned-green-dark
+                    cursor: "default", // Not clickable
+                  }}
+                  title="You own this coin"
+                >
+                  <CheckCircle size={20} />
+                </div>
+              )}
+
+              {/* Google Search Button */}
+              <a
+                href={searchUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  ...actionBtnStyle,
+                  background: "#eff6ff",
+                  border: "1px solid var(--primary)",
+                  color: "var(--primary)",
+                }}
+                title="Search for this coin on Google"
+              >
+                <Search size={20} />
+              </a>
+
+              {/* Add Coin Button */}
+              {session && !displayData.is_owned && onAddCoin && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAddCoin(displayData);
+                  }}
+                  style={{
+                    ...actionBtnStyle,
+                    background: "#fffbeb",
+                    border: "1px solid var(--brand-gold)",
+                    color: "#d97706",
+                  }}
+                  title="Add this coin to your collection"
+                >
+                  <PlusCircle size={20} />
+                </button>
+              )}
+            </div>
           </div>
+
+          {/* Close Button (Separate from title wrapper) */}
           <button className="modal-close" onClick={onClose}>
             <X size={24} />
           </button>

@@ -7,7 +7,7 @@ import { supabase } from "../lib/supabaseClient";
 
 export default function AddCoinModal({ onClose, initialCoin = null }) {
   // If initialCoin is provided, skip to step 2 (Upload)
-  const [step, setStep] = useState(initialCoin ? 2 : 1); 
+  const [step, setStep] = useState(initialCoin ? 2 : 1);
   const [selectedCoin, setSelectedCoin] = useState(initialCoin);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -24,9 +24,13 @@ export default function AddCoinModal({ onClose, initialCoin = null }) {
         return;
       }
       setIsSearching(true);
+
+      // FETCH: ID, Name, Year, KM, Subject, Period Shorthand, Denomination Name
       const { data } = await supabase
         .from("f_coins")
-        .select("coin_id, name, year, km")
+        .select(
+          "coin_id, name, year, km, subject, d_period(period_shorthand), d_denominations(denomination_name)"
+        )
         .or(`name.ilike.%${searchTerm}%,km.ilike.%${searchTerm}%`)
         .limit(10);
 
@@ -54,6 +58,27 @@ export default function AddCoinModal({ onClose, initialCoin = null }) {
     } else {
       alert("Error: " + result.error);
     }
+  };
+
+  // Helper to construct the line: Denomination • Year • KM# • Subject
+  const getCoinDescription = (coin) => {
+    const parts = [];
+
+    // 1. Denomination
+    if (coin.d_denominations?.denomination_name) {
+      parts.push(coin.d_denominations.denomination_name);
+    }
+
+    // 2. Year
+    if (coin.year) parts.push(coin.year);
+
+    // 3. KM
+    if (coin.km) parts.push(coin.km);
+
+    // 4. Subject
+    if (coin.subject) parts.push(coin.subject);
+
+    return parts.join(" • ");
   };
 
   return (
@@ -137,20 +162,51 @@ export default function AddCoinModal({ onClose, initialCoin = null }) {
                       (e.currentTarget.style.borderColor = "var(--border)")
                     }
                   >
-                    <div>
-                      <div style={{ fontWeight: "600", fontSize: "0.9rem" }}>
-                        {coin.name}
+                    <div style={{ flex: 1, minWidth: 0, paddingRight: "1rem" }}>
+                      {/* Name + Period */}
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "baseline",
+                          gap: "0.5rem",
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <span style={{ fontWeight: "600", fontSize: "0.9rem" }}>
+                          {coin.name}
+                        </span>
+                        {coin.d_period?.period_shorthand && (
+                          <span
+                            style={{
+                              fontSize: "0.75rem",
+                              color: "#64748b",
+                              fontWeight: "400",
+                            }}
+                          >
+                            {coin.d_period.period_shorthand}
+                          </span>
+                        )}
                       </div>
+
+                      {/* Description Line: Denom • Year • KM • Subject */}
                       <div
                         style={{
                           fontSize: "0.8rem",
                           color: "var(--text-light)",
+                          marginTop: "2px",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
                         }}
                       >
-                        {coin.year} • {coin.km}
+                        {getCoinDescription(coin)}
                       </div>
                     </div>
-                    <CheckCircle size={16} color="var(--border)" />
+                    <CheckCircle
+                      size={16}
+                      color="var(--border)"
+                      style={{ flexShrink: 0 }}
+                    />
                   </div>
                 ))}
                 {searchTerm.length > 1 &&
@@ -187,9 +243,43 @@ export default function AddCoinModal({ onClose, initialCoin = null }) {
                 >
                   SELECTED COIN
                 </span>
-                <h3 style={{ margin: "0.2rem 0 0.5rem 0", fontSize: "1rem" }}>
-                  {selectedCoin.name}
+
+                {/* Header: Name + Period */}
+                <h3
+                  style={{
+                    margin: "0.2rem 0 0.5rem 0",
+                    fontSize: "1rem",
+                    display: "flex",
+                    alignItems: "baseline",
+                    gap: "0.5rem",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <span>{selectedCoin.name}</span>
+                  {selectedCoin.d_period?.period_shorthand && (
+                    <span
+                      style={{
+                        fontSize: "0.8rem",
+                        color: "#64748b",
+                        fontWeight: "400",
+                      }}
+                    >
+                      {selectedCoin.d_period.period_shorthand}
+                    </span>
+                  )}
                 </h3>
+
+                {/* Summary Line */}
+                <div
+                  style={{
+                    fontSize: "0.8rem",
+                    color: "var(--text-light)",
+                    marginBottom: "0.5rem",
+                  }}
+                >
+                  {getCoinDescription(selectedCoin)}
+                </div>
+
                 <button
                   type="button"
                   onClick={() => setStep(1)}
