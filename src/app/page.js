@@ -1,23 +1,35 @@
 "use client";
 
-import { useState } from "react";
-import dynamic from "next/dynamic"; // 1. Import dynamic
+import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import Header from "../components/Header";
 import FilterBar from "../components/FilterBar";
 import CoinGallery from "../components/CoinGallery";
 import { useCoins } from "../hooks/useCoins";
+import { supabase } from "../lib/supabaseClient";
 
-// 2. Lazy Load the Modal
-// ssr: false means "don't try to render this on the server", which saves server CPU
-// since modals are purely client-side interactions anyway.
-const CoinModal = dynamic(() => import("../components/CoinModal"), { 
-  ssr: false,
-  loading: () => null // Optional: render nothing while loading code
-});
+// Lazy Load Modals
+const CoinModal = dynamic(() => import("../components/CoinModal"), { ssr: false });
+const AddCoinModal = dynamic(() => import("../components/AddCoinModal"), { ssr: false });
 
 export default function Home() {
   const [selectedCoin, setSelectedCoin] = useState(null);
   const [viewMode, setViewMode] = useState("grid");
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [session, setSession] = useState(null);
+
+  // AUTH CHECK ON MOUNT
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const {
     coins,
@@ -31,7 +43,12 @@ export default function Home() {
 
   return (
     <div className="app-container">
-      <Header ownedCount={ownedCount} displayCount={coins.length} />
+      <Header 
+        ownedCount={ownedCount} 
+        displayCount={coins?.length || 0}
+        // Only pass the handler if the user is logged in
+        onAddCoin={session ? () => setIsAddModalOpen(true) : null}
+      />
 
       <main className="main-content">
         <FilterBar
@@ -44,7 +61,7 @@ export default function Home() {
         />
 
         <CoinGallery
-          coins={coins}
+          coins={coins || []}
           loading={loading}
           categories={metadata.categories}
           onCoinClick={setSelectedCoin}
@@ -54,13 +71,18 @@ export default function Home() {
         />
       </main>
 
-      {/* 3. Render conditionally - code downloads only when selectedCoin becomes true */}
+      {/* View Coin Modal */}
       {selectedCoin && (
         <CoinModal coin={selectedCoin} onClose={() => setSelectedCoin(null)} />
       )}
+      
+      {/* Add Coin Modal */}
+      {isAddModalOpen && (
+        <AddCoinModal onClose={() => setIsAddModalOpen(false)} />
+      )}
 
       <footer className="app-footer">
-        <p>Numismatic Gallery v2 • {coins.length} coins loaded</p>
+        <p>Numismatic Gallery v2 • {(coins?.length || 0)} coins loaded</p>
       </footer>
     </div>
   );

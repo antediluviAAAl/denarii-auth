@@ -2,12 +2,13 @@
 
 import React from "react";
 import Image from "next/image";
-import { Database, CheckCircle } from "lucide-react";
+import { Database, CheckCircle, PlusCircle } from "lucide-react";
 
 export default function Header({
-  ownedCount,
-  displayCount,
+  ownedCount = 0,
+  displayCount = 0,
   totalCoins = 264962,
+  onAddCoin, // NEW PROP
 }) {
   return (
     <header className="app-header">
@@ -43,9 +44,28 @@ export default function Header({
         </div>
 
         <div className="header-stats">
+          {/* NEW: Add Coin Button (Only shows if onAddCoin is provided) */}
+          {onAddCoin && (
+            <button 
+              onClick={onAddCoin}
+              className="stat-badge"
+              style={{ 
+                cursor: "pointer", 
+                borderColor: "var(--brand-gold)", 
+                background: "#fffbeb",
+                flexDirection: "row",
+                gap: "0.5rem"
+              }}
+            >
+              <PlusCircle size={20} className="text-gold" />
+              <span className="stat-value" style={{ fontSize: "0.9rem" }}>Add Coin</span>
+            </button>
+          )}
+
           <div className="stat-badge">
             <span className="stat-label">Showing</span>
-            <span className="stat-value">{displayCount.toLocaleString()}</span>
+            {/* Defensive check for displayCount */}
+            <span className="stat-value">{(displayCount || 0).toLocaleString()}</span>
           </div>
         </div>
       </div>
